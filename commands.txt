@@ -1,0 +1,4 @@
+python3 -i train.py --dataroot ./datasets/streetView/ --name streetview_pangan_3 --model pangan --direction BtoA --dataset_mode single --gpu_ids 1 --save_epoch_freq 1
+
+python3 -i rank.py --dataroot ./datasets/street_view/sides/ --model pangan --dataset_mode frankenstein
+python3 -i ranker.py --dataroot ./datasets/street_view/sides/ --model pangan --dataset_mode single --save_epoch_freq 1 --gpu_idx 1,2,3
