@@ -9,6 +9,8 @@ import pdb
 import torch
 from collections import OrderedDict
 from util import util
+import numpy as np
+from scipy.misc import imsave
 
 # Generates a ton of images and ranks them in order of
 # discriminator loss
@@ -19,14 +21,15 @@ if __name__ == '__main__':
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
 
-    print('#training images = %d' % dataset_size)
+    dirname = '12_nol1'
 
     model = create_model(opt)
     model.setup(opt)
     total_steps = 0
 
-    chkpt_D = torch.load('checkpoints/streetview_pangan_2/10_net_D.pth')
-    chkpt_G = torch.load('checkpoints/streetview_pangan_2/10_net_G.pth')
+    chkpt_D = torch.load('checkpoints/ranker/earliest_net_D.pth')
+    #chkpt_G = torch.load('checkpoints/streetview_throttled_sidesonly/12_net_G.pth')
+    chkpt_G = torch.load('checkpoints/streetview_nol1/12_net_G.pth')
 
     new_chkpt_D = OrderedDict()
     new_chkpt_G = OrderedDict()
@@ -43,7 +46,7 @@ if __name__ == '__main__':
     samples = []
 
     for i, data in enumerate(dataset):
-        if i < 100:
+        if i < 1000:
             print(i)
             model.set_input(data)
 
@@ -61,7 +64,7 @@ if __name__ == '__main__':
 
             fake_B = util.tensor2im(model.fake_B)
             #samples.append([loss, model.fake_B[0].detach().cpu().numpy().transpose(1,2,0)])
-            samples.append([loss, fake_B])
+            samples.append([loss.item(), fake_B])
         else:
             break
     samples.sort(key=lambda x: x[0])
@@ -69,3 +72,7 @@ if __name__ == '__main__':
 def plotim(im):
     plt.imshow(im)
     plt.show()
+
+for i, sample in enumerate(samples):
+    print(i)
+    imsave('ranked/{}/{}.jpg'.format(dirname, i), sample[1])

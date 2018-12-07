@@ -3,6 +3,10 @@ from util.image_pool import ImagePool
 from .base_model import BaseModel
 from . import networks
 
+import pdb
+from util.util import tensor2im
+import matplotlib.pyplot as plt
+
 class PanGANModel(BaseModel):
     def name(self):
         return 'Pix2PixModel'
@@ -62,7 +66,8 @@ class PanGANModel(BaseModel):
         # Input is cut off middle third
         w = self.real_B.shape[3]
         self.real_A = self.real_B.clone()
-        self.real_A[:,:,:,w//3:w//3*2] = 0
+        #self.real_A[:,:,:,w//3:-w//3] = -1
+        self.real_A[:,:,:,w//3:2*w//3] = 0
 
         self.image_paths = input['A_paths']
 
@@ -95,6 +100,7 @@ class PanGANModel(BaseModel):
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
 
+        #self.loss_G_L1 = 0
         self.loss_G = self.loss_G_GAN + self.loss_G_L1
 
         self.loss_G.backward()
