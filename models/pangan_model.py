@@ -44,6 +44,7 @@ class PanGANModel(BaseModel):
             use_sigmoid = opt.no_lsgan
             self.netD = networks.define_D(opt.input_nc + opt.output_nc, opt.ndf, opt.netD,
                                           opt.n_layers_D, opt.norm, use_sigmoid, opt.init_type, opt.init_gain, self.gpu_ids)
+            self.loss_throttle = .7     # Minimum loss (throttling discriminator learning)
 
         if self.isTrain:
             self.fake_AB_pool = ImagePool(opt.pool_size)
@@ -114,7 +115,7 @@ class PanGANModel(BaseModel):
         self.backward_D()
 
         # Throttle discriminator
-        if self.loss_D > .5:
+        if self.loss_D > self.loss_throttle:
             self.optimizer_D.step()
 
         # update G
@@ -122,3 +123,7 @@ class PanGANModel(BaseModel):
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
+
+    def update_discriminator_threshold(self):
+        self.loss_throttle *= .95
+        print('loss throttle = %.7f' % self.loss_throttle)
