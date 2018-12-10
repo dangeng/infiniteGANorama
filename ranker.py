@@ -8,10 +8,21 @@ from options.train_options import TrainOptions
 from data import CreateDataLoader
 from models import create_model
 from util.visualizer import Visualizer
+from models import networks
 
 import pdb
 import torch
 from collections import OrderedDict
+
+def load_chkpt(network, fname):
+    chkpt = torch.load(fname)
+    new_chkpt = OrderedDict()
+
+    for k, v in chkpt.items():
+        name = 'module.' + k # add `module`
+        new_chkpt[name] = v
+
+    network.load_state_dict(new_chkpt)
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()
@@ -24,6 +35,7 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)
     total_steps = 0
 
+    '''
     chkpt_D = torch.load('checkpoints/streetview_throttled/15_net_D.pth')
     chkpt_G = torch.load('checkpoints/streetview_throttled/15_net_G.pth')
 
@@ -38,6 +50,23 @@ if __name__ == '__main__':
 
     model.netD.load_state_dict(new_chkpt_D)
     model.netG.load_state_dict(new_chkpt_G)
+    '''
+
+    G_model_chkpts = ['checkpoints/streetview_throttled/15_net_G.pth',
+                      'checkpoints/streetview_throttled/12_net_G.pth',
+                      'checkpoints/streetview_throttled/18_net_G.pth',
+                      'checkpoints/streetview_throttled/9_net_G.pth']
+    G_networks = []
+    for i in range(len(G_model_chkpts)):
+        netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
+                                 not opt.no_dropout, opt.init_type, opt.init_gain, opt.gpu_ids)
+        load_chkpt(netG, G_model_chkpts[i])
+        G_networks.append(netG)
+    netGs = networks.RandomNetwork(G_networks)
+
+    #load_chkpt(model.netG, 'checkpoints/streetview_throttled/15_net_G.pth')
+    model.netG = netGs
+    load_chkpt(model.netD, 'checkpoints/streetview_throttled/15_net_D.pth')
 
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         epoch_start_time = time.time()

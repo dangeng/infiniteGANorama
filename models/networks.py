@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
+import numpy as np
 
 ###############################################################################
 # Helper Functions
@@ -381,3 +382,13 @@ class PixelDiscriminator(nn.Module):
 
     def forward(self, input):
         return self.net(input)
+
+class RandomNetwork(nn.Module):
+    def __init__(self, networks):
+        super(RandomNetwork, self).__init__()
+        self.networks = networks
+
+    def forward(self, input):
+        idx = np.random.randint(len(self.networks))
+        print(idx)
+        return self.networks[idx](input)
