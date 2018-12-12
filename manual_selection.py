@@ -27,6 +27,7 @@ if __name__ == '__main__':
     opt = TrainOptions().parse()
     opt.no_flip = True
     opt.resize_or_crop='none'
+    opt.dataset_mode='manual2'
 
     data_loader = CreateDataLoader(opt)
     dataset = data_loader.load_data()
@@ -39,7 +40,8 @@ if __name__ == '__main__':
     total_steps = 0
 
     chkpt_D = torch.load('checkpoints/ranker/earliest_net_D.pth')
-    chkpt_G = torch.load('checkpoints/streetview_throttled_sidesonly/12_net_G.pth') # good generator
+    #chkpt_G = torch.load('checkpoints/streetview_throttled_sidesonly/12_net_G.pth') # good generator
+    chkpt_G = torch.load('checkpoints/streetview_nlayers5/30_net_G.pth') # best generator!!!
     #chkpt_G = torch.load('checkpoints/streetview_nol1/12_net_G.pth')
 
     new_chkpt_D = OrderedDict()
@@ -98,3 +100,6 @@ if __name__ == '__main__':
         new_seg[:, -256:, :] = generated[i]/255.
         pano = np.maximum(new_pano, new_seg)
 
+print('Save name: ')
+name = input()
+imsave('results/manual/sv/new_G/{}.jpg'.format(name), pano)
