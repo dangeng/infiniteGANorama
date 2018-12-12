@@ -52,10 +52,39 @@ if __name__ == '__main__':
     model.netG.load_state_dict(new_chkpt_G)
     '''
 
-    G_model_chkpts = ['checkpoints/streetview_throttled/15_net_G.pth',
-                      'checkpoints/streetview_throttled/12_net_G.pth',
-                      'checkpoints/streetview_throttled/18_net_G.pth',
-                      'checkpoints/streetview_throttled/9_net_G.pth']
+    G_model_chkpts = ['checkpoints/streetview_nlayers5/20_net_G.pth',
+                      'checkpoints/streetview_nlayers5/21_net_G.pth',
+                      'checkpoints/streetview_nlayers5/22_net_G.pth',
+                      'checkpoints/streetview_nlayers5/23_net_G.pth',
+                      'checkpoints/streetview_nlayers5/24_net_G.pth',
+                      'checkpoints/streetview_nlayers5/25_net_G.pth',
+                      'checkpoints/streetview_nlayers5/26_net_G.pth',
+                      'checkpoints/streetview_nlayers5/27_net_G.pth',
+                      'checkpoints/streetview_nlayers5/28_net_G.pth',
+                      'checkpoints/streetview_nlayers5/29_net_G.pth',
+                      'checkpoints/streetview_nlayers5/30_net_G.pth',
+                      'checkpoints/streetview_nlayers5/31_net_G.pth',
+                      'checkpoints/streetview_nlayers5/32_net_G.pth',
+                      'checkpoints/streetview_nlayers5/33_net_G.pth',
+                      'checkpoints/streetview_nlayers5/34_net_G.pth',
+                      'checkpoints/streetview_nlayers5/35_net_G.pth',
+                      'checkpoints/streetview_nlayers5/36_net_G.pth',
+                      'checkpoints/streetview_nlayers5/37_net_G.pth',
+                      'checkpoints/streetview_nlayers5/38_net_G.pth',
+                      'checkpoints/streetview_nlayers5/39_net_G.pth',
+                      'checkpoints/streetview_nlayers5/40_net_G.pth',
+                      'checkpoints/streetview_nlayers5/41_net_G.pth',
+                      'checkpoints/streetview_nlayers5/42_net_G.pth',
+                      'checkpoints/streetview_nlayers5/43_net_G.pth',
+                      'checkpoints/streetview_nlayers5/44_net_G.pth']
+
+    '''
+    'checkpoints/streetview_nlayers5/45_net_G.pth',
+    'checkpoints/streetview_nlayers5/46_net_G.pth',
+    'checkpoints/streetview_nlayers5/47_net_G.pth',
+    'checkpoints/streetview_nlayers5/48_net_G.pth',
+    'checkpoints/streetview_nlayers5/49_net_G.pth']
+    '''
     G_networks = []
     for i in range(len(G_model_chkpts)):
         netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
@@ -109,14 +138,14 @@ if __name__ == '__main__':
             if total_steps % opt.save_latest_freq == 0:
                 print('saving the latest model (epoch %d, total_steps %d)' %
                       (epoch, total_steps))
-                model.save_networks('latest')
+                model.save_networks('latest', saveG=False)
 
             iter_data_time = time.time()
         if epoch % opt.save_epoch_freq == 0:
             print('saving the model at the end of epoch %d, iters %d' %
                   (epoch, total_steps))
-            model.save_networks('latest')
-            model.save_networks(epoch)
+            model.save_networks('latest', saveG=False)
+            model.save_networks(epoch, saveG=False)
 
         print('End of epoch %d / %d \t Time Taken: %d sec' %
               (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time))

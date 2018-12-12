@@ -390,5 +390,4 @@ class RandomNetwork(nn.Module):
 
     def forward(self, input):
         idx = np.random.randint(len(self.networks))
-        print(idx)
         return self.networks[idx](input)

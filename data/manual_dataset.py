@@ -9,6 +9,11 @@ import pdb
 
 
 class ManualDataset(BaseDataset):
+    '''
+    Manual dataset that selects only from the left side of the image
+    This short coming is addressed in Manual2Dataset, so should probably use that
+    '''
+
     @staticmethod
     def modify_commandline_options(parser, is_train):
         return parser

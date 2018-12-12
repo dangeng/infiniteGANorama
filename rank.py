@@ -1,3 +1,4 @@
+import os
 import time
 from options.train_options import TrainOptions
 from data import CreateDataLoader
@@ -21,15 +22,18 @@ if __name__ == '__main__':
     dataset = data_loader.load_data()
     dataset_size = len(data_loader)
 
-    dirname = '12_nol1'
+    dirname = 'sv_nlayer5'
+    if not os.path.exists('ranked/{}'.format(dirname)):
+        os.mkdir('ranked/{}'.format(dirname))
 
     model = create_model(opt)
     model.setup(opt)
     total_steps = 0
 
-    chkpt_D = torch.load('checkpoints/ranker/earliest_net_D.pth')
-    #chkpt_G = torch.load('checkpoints/streetview_throttled_sidesonly/12_net_G.pth')
-    chkpt_G = torch.load('checkpoints/streetview_nol1/12_net_G.pth')
+    chkpt_D = torch.load('checkpoints/sv_nlayers5_ranker/2_net_D.pth')
+    #chkpt_G = torch.load('checkpoints/streetview_throttled_sidesonly/33_net_G.pth')
+    chkpt_G = torch.load('checkpoints/streetview_nlayers5/30_net_G.pth')
+    #chkpt_G = torch.load('checkpoints/streetview_nol1/33_net_G.pth')
 
     new_chkpt_D = OrderedDict()
     new_chkpt_G = OrderedDict()
