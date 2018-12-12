@@ -88,9 +88,9 @@ class BaseModel():
         return errors_ret
 
     # save models to the disk
-    def save_networks(self, epoch):
+    def save_networks(self, epoch, saveG=True):
         for name in self.model_names:
-            if isinstance(name, str):
+            if isinstance(name, str) and (name!='G' or (name=='G' and saveG)):
                 save_filename = '%s_net_%s.pth' % (epoch, name)
                 save_path = os.path.join(self.save_dir, save_filename)
                 net = getattr(self, 'net' + name)
