@@ -5,6 +5,8 @@ import functools
 from torch.optim import lr_scheduler
 import numpy as np
 
+import pdb
+
 ###############################################################################
 # Helper Functions
 ###############################################################################
@@ -100,6 +102,10 @@ def define_D(input_nc, ndf, netD,
         net = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
     elif netD == 'pixel':
         net = PixelDiscriminator(input_nc, ndf, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
+    elif netD == 'pyramid':
+        networks = [NLayerDiscriminator(input_nc, ndf, n_layers=layers, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
+                    for layers in range(1, 6)]
+        net = ConcatNet(networks)
     else:
         raise NotImplementedError('Discriminator model name [%s] is not recognized' % net)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -390,5 +396,13 @@ class RandomNetwork(nn.Module):
 
     def forward(self, input):
         idx = np.random.randint(len(self.networks))
-        print(idx)
         return self.networks[idx](input)
+
+class ConcatNet(nn.Module):
+    def __init__(self, networks):
+        super(ConcatNet, self).__init__()
+        self.networks = nn.ModuleList(networks)
+
+    def forward(self, input):
+        outputs = [network(input).mean() for network in self.networks]
+        return torch.stack(outputs)
