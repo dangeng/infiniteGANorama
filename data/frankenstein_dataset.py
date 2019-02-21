@@ -3,6 +3,7 @@ from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 import numpy as np
 from PIL import Image
+from scipy.misc import imresize
 
 
 class FrankensteinDataset(BaseDataset):
@@ -21,6 +22,15 @@ class FrankensteinDataset(BaseDataset):
 
         self.transform = get_transform(opt)
 
+    def random_crop(self, im, size=500, resize=256):
+        h,w,_ = im.shape
+        h_start, w_start = np.random.randint(h-size), np.random.randint(w-size)
+        crop = im[h_start:h_start+size, w_start:w_start+size, :].copy()
+        if resize:
+            return imresize(crop, (resize, resize))
+        else:
+            return crop
+
     def __getitem__(self, index):
         idx_l = np.random.randint(len(self.A_paths))
         idx_r = np.random.randint(len(self.A_paths))
@@ -31,6 +41,8 @@ class FrankensteinDataset(BaseDataset):
 
         A_l = np.array(A_img_l)
         A_r = np.array(A_img_r)
+
+        #A_l, A_r = self.random_crop(A_l), self.random_crop(A_r) # CHANGE
 
         h,w,c = A_l.shape
 

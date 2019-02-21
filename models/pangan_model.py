@@ -80,6 +80,7 @@ class PanGANModel(BaseModel):
         # stop backprop to the generator by detaching fake_B
         fake_AB = self.fake_AB_pool.query(torch.cat((self.real_A, self.fake_B), 1))
         pred_fake = self.netD(fake_AB.detach())
+        #print(pred_fake.shape)
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
         # Real
