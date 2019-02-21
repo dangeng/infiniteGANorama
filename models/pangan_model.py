@@ -115,7 +115,8 @@ class PanGANModel(BaseModel):
         self.backward_D()
 
         # Throttle discriminator
-        if self.loss_D > self.loss_throttle:
+        #if self.loss_D > self.loss_throttle:
+        if self.loss_D > .5:
             self.optimizer_D.step()
 
         # update G
@@ -125,5 +126,5 @@ class PanGANModel(BaseModel):
         self.optimizer_G.step()
 
     def update_discriminator_threshold(self):
-        self.loss_throttle *= .95
+        self.loss_throttle = max(.45, self.loss_throttle * .95)
         print('loss throttle = %.7f' % self.loss_throttle)
