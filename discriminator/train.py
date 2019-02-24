@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import torch.optim as optim
 import torch
+from tqdm import tqdm
 
 from tensorboardX import SummaryWriter
 
@@ -17,7 +18,8 @@ writer = SummaryWriter()
 
 device = torch.device("cuda")
 
-model = networks.define_D(3, 64, 'n_layers', n_layers_D=3, use_sigmoid=True)      # Shouldn't be patchGAN, add fc layer at end
+# Shouldn't be patchGAN, add fc layer at end
+model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=128)
 model.to(device)
 
 optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
@@ -25,7 +27,8 @@ optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
 total_steps = 0
 
 dataset = FrankensteinDataset()
-dataset.initialize('../datasets/street_view/sides/')
+#dataset.initialize('../datasets/street_view/sides/')
+dataset.initialize('../../data/semanticLandscapes/train_img')
 
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -34,10 +37,11 @@ for epoch in range(100):
 
     model.train()
     print('Epoch: {}'.format(epoch))
-    for i, (data, target) in enumerate(train_loader):
+    for i, (data, target) in tqdm(enumerate(train_loader), total=len(train_loader)):
+        if type(data) is type({}):
+            continue
+
         data, target = data.to(device), target.to(device)
-        print(data.shape)
-        raise Exception
 
         total_steps += batch_size
         epoch_iter += batch_size

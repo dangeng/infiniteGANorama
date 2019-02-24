@@ -7,6 +7,8 @@ from scipy.misc import imresize
 from torchvision.transforms import ToTensor, Compose
 import torch
 
+import pdb
+
 class FrankensteinDataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser, is_train):
@@ -56,10 +58,17 @@ class FrankensteinDataset(BaseDataset):
         #A_l, A_r = self.random_crop(A_l), self.random_crop(A_r) # CHANGE
 
         h,w,c = A_l.shape
+        h = min(h, A_r.shape[0])    # Choose min height
+        w = w//3
 
-        A_img_l_crop = A_l[:,:w//3,:]
-        A_img_r_crop = A_r[:,2*w//3:,:]
-        A_img = np.hstack((A_img_l_crop, A_img_r_crop))
+        A_img_l_crop = A_l[:h,:w,:]
+        A_img_r_crop = A_r[:h,-w:,:]
+        #A_img = np.hstack((A_img_l_crop, A_img_r_crop))
+        # concatenate on channel axis
+        try:
+            A_img = np.concatenate((A_img_l_crop, A_img_r_crop), 2) 
+        except:
+            return {}, {}
 
         transform = ToTensor()
 
