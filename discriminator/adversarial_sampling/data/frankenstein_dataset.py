@@ -61,6 +61,7 @@ class FrankensteinDataset(BaseDataset):
         except:
             return {}, {}
 
+        # Really, these should be the same three numbers, two times
         transform = Compose([ToTensor(), 
             Normalize([0.4009, 0.3978, 0.3817, 0.4032, 0.3987, 0.3820],
                       [0.14384869, 0.1398176 , 0.16267562, 0.14757314, 0.14043665, 0.16479132])])
