@@ -3,9 +3,10 @@ from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 import numpy as np
 from PIL import Image
-from scipy.misc import imresize
+from scipy.misc import imresize, imsave
 from torchvision.transforms import ToTensor, Compose
 import torch
+import cv2
 
 import pdb
 
@@ -32,6 +33,36 @@ class FrankensteinDataset(BaseDataset):
         else:
             return crop
 
+    def crop(self, im_l, im_r, same):
+        '''
+        Crop image to 341 x 500
+        Starting image is assumed to be guranteed to be size 1024 x >500
+        '''
+        SIZE = 1024
+        WIDTH = 341
+        HEIGHT = 500
+
+        SIZE = 512
+        WIDTH = 170
+        HEIGHT = 249
+
+        yl = np.random.randint(0, im_l.shape[0]-HEIGHT)
+        yr = np.random.randint(0, im_r.shape[0]-HEIGHT)
+
+        if same:
+            # we choose the actual left and right "half"
+            xl = np.random.randint(0, SIZE//2 - WIDTH)
+            xr = np.random.randint(SIZE//2, SIZE - WIDTH)
+
+            # Set y cuts to be the same (we want horizons!)
+            yl = yr
+        else:
+            # we choose the patch from anywhere
+            xl = np.random.randint(0, SIZE - WIDTH)
+            xr = np.random.randint(0, SIZE - WIDTH)
+
+        return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :]
+
     def __getitem__(self, index):
         if self.allrandom:
             same = 0
@@ -57,6 +88,19 @@ class FrankensteinDataset(BaseDataset):
 
         #A_l, A_r = self.random_crop(A_l), self.random_crop(A_r) # CHANGE
 
+        A_img_l_crop, A_img_r_crop = self.crop(A_l, A_r, same)
+
+        # Ensure commutativity, flip right side
+        A_img_r_crop = A_img_r_crop[:,::-1,:]
+
+        '''
+        A_img = np.hstack((A_img_l_crop, A_img_r_crop))
+        imsave('test_ims/{}.jpg'.format(index), A_img)
+        imsave('test_ims/{}-l.jpg'.format(index), A_l)
+        imsave('test_ims/{}-r.jpg'.format(index), A_r)
+        '''
+
+        '''
         h,w,c = A_l.shape
         h = min(h, A_r.shape[0])    # Choose min height
         w = w//3
@@ -64,17 +108,22 @@ class FrankensteinDataset(BaseDataset):
         A_img_l_crop = A_l[:h,:w,:]
         A_img_r_crop = A_r[:h,-w:,:]
         #A_img = np.hstack((A_img_l_crop, A_img_r_crop))
+        '''
         # concatenate on channel axis
         try:
             A_img = np.concatenate((A_img_l_crop, A_img_r_crop), 2) 
         except:
             return {}, {}
 
+        #pdb.set_trace()
+        #A_img = cv2.resize(A_img, dsize=(170, 250), interpolation=cv2.INTER_CUBIC)
+
         transform = ToTensor()
 
         return transform(A_img), same
 
     def __len__(self):
+        # if we use length squared things break (?)
         return len(self.A_paths)
 
     def name(self):
