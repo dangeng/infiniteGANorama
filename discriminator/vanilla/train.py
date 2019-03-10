@@ -12,27 +12,34 @@ from tqdm import tqdm
 
 from tensorboardX import SummaryWriter
 
+# Must be one for patch_loss
 batch_size = 1
 
 writer = SummaryWriter()
 
-device = torch.device("cuda")
+device = torch.device("cuda:1")
 
 # Shouldn't be patchGAN, add fc layer at end
-model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=128)
+#model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=256)
+#model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
+model = networks.Siamese()
 model.to(device)
+#model = torch.nn.DataParallel(model, device_ids=(0,1,3,4))
 
-optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
+patch_loss = networks.GANLoss().to(device)
+
+optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.5)
 
 total_steps = 0
 
 dataset = FrankensteinDataset()
 #dataset.initialize('../datasets/street_view/sides/')
-dataset.initialize('../../data/semanticLandscapes/train_img')
+dataset.initialize('../../../data/semanticLandscapes512/train_img')
 
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-for epoch in range(100):
+# Just train forever
+for epoch in range(100000000000):
     epoch_iter = 0
 
     model.train()
@@ -48,7 +55,10 @@ for epoch in range(100):
 
         optimizer.zero_grad()
         pred = model(data)
-        loss = F.binary_cross_entropy(pred, target)
+        #pdb.set_trace()
+
+        #loss = F.binary_cross_entropy(pred, target)
+        loss = patch_loss(pred, target)
         loss.backward()
         optimizer.step()
 
@@ -56,4 +66,4 @@ for epoch in range(100):
         if i % 10==0:
             writer.add_scalar('loss', loss.item(),total_steps)
 
-    torch.save({'state_dict': model.state_dict()}, 'checkpoints/{}.pth'.format(epoch))
+    torch.save({'state_dict': model.state_dict()}, 'checkpoints_siamese/{}.pth'.format(epoch))
