@@ -90,14 +90,14 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
 
 
 def define_D(input_nc, ndf, netD,
-             n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', init_gain=0.02, gpu_ids=[], out_channels=1):
+             n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', init_gain=0.02, gpu_ids=[], out_channels=1, glob=False):
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
     if netD == 'basic':
         net = NLayerDiscriminator(input_nc, ndf, n_layers=3, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
     elif netD == 'n_layers':
-        net = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, out_channels=out_channels)
+        net = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, out_channels=out_channels,glob=glob)
     elif netD == 'pixel':
         net = PixelDiscriminator(input_nc, ndf, norm_layer=norm_layer, use_sigmoid=use_sigmoid)
     else:
@@ -317,7 +317,7 @@ class Flatten(nn.Module):
         return input.view(input.size(0), -1)
 
 class NLayerDiscriminator(nn.Module):
-    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, out_channels=1):
+    def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, out_channels=1, glob=False):
         super(NLayerDiscriminator, self).__init__()
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
@@ -357,13 +357,25 @@ class NLayerDiscriminator(nn.Module):
         if use_sigmoid:
             sequence += [Flatten(), nn.Linear(437, 1), nn.Sigmoid()]
 
-        if out_channels != 1:
-            sequence += [nn.AdaptiveMaxPool2d(1), Flatten(), nn.Linear(out_channels, 1), nn.Sigmoid()]
+        if glob:
+            sequence += [nn.AdaptiveAvgPool2d(1), Flatten(), nn.Linear(out_channels, 1), nn.Sigmoid()]
 
         self.model = nn.Sequential(*sequence)
 
     def forward(self, input):
         return self.model(input)
+
+class Siamese(nn.Module):
+    def __init__(self):
+        super(Siamese, self).__init__()
+        self.body = define_D(3, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=128)
+        self.head = nn.Conv2d(256, 1, 3)
+
+    def forward(self, input):
+        out_left = self.body(input[:,:3,:,:])
+        out_right = self.body(input[:,3:,:,:])
+        cat = torch.cat((out_left, out_right), dim=1)
+        return self.head(cat)
 
 
 class PixelDiscriminator(nn.Module):
