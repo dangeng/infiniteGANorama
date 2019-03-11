@@ -13,20 +13,20 @@ from tqdm import tqdm
 from tensorboardX import SummaryWriter
 
 # Must be one for patch_loss
-batch_size = 1
+batch_size = 32
 
-writer = SummaryWriter()
+writer = SummaryWriter(comment="CorrectBatchNorm")
 
-device = torch.device("cuda:1")
+device = torch.device("cuda:4")
 
 # Shouldn't be patchGAN, add fc layer at end
 #model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=256)
-#model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
-model = networks.Siamese()
+model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
+#model = networks.Siamese()
 model.to(device)
 #model = torch.nn.DataParallel(model, device_ids=(0,1,3,4))
 
-patch_loss = networks.GANLoss().to(device)
+patch_loss = networks.GANLoss(use_lsgan=False).to(device)
 
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.5)
 
@@ -62,8 +62,7 @@ for epoch in range(100000000000):
         loss.backward()
         optimizer.step()
 
-
         if i % 10==0:
             writer.add_scalar('loss', loss.item(),total_steps)
 
-    torch.save({'state_dict': model.state_dict()}, 'checkpoints_siamese/{}.pth'.format(epoch))
+    torch.save({'state_dict': model.state_dict()}, 'checkpoints_bn/{}.pth'.format(epoch))

@@ -16,7 +16,7 @@ device = torch.device("cuda")
 #model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=256, glob=True)
 model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
 #model = networks.Siamese()
-chkpt = torch.load('checkpoints_fast/133.pth')
+chkpt = torch.load('checkpoints_bn/4.pth')
 model.load_state_dict(chkpt['state_dict'])
 model.to(device)
 
@@ -30,14 +30,15 @@ dataset.initialize('../../../data/semanticLandscapes512/train_img', allrandom=Tr
 
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
+# WHAT THE FUCK IS THIS?????
 ims = []
 preds = []
 
 
 # 1000 ~ 25 sec
 # 100000 ~ 2500 sec
+model.eval()
 for i in range(10000):
-#for i in range(10000):
 #for i, (data, target) in enumerate(train_loader):
     if i % 100 == 0:
         print(i)
@@ -48,7 +49,8 @@ for i in range(10000):
     total_steps += batch_size
 
     pred = model(data)
-    loss = patch_loss(pred.cpu(), target)
+    pred = F.sigmoid(pred).mean(dim=(2,3))
+    #loss = patch_loss(pred.cpu(), target)
     #loss = F.binary_cross_entropy(pred, target)
 
     ims.append(data.detach().cpu().numpy())

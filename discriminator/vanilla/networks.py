@@ -122,7 +122,8 @@ class GANLoss(nn.Module):
         if use_lsgan:
             self.loss = nn.MSELoss()
         else:
-            self.loss = nn.BCELoss()
+            #self.loss = nn.BCELoss()
+            self.loss = nn.BCEWithLogitsLoss()
 
     def get_target_tensor(self, input, target_is_real):
         if target_is_real:
@@ -131,9 +132,12 @@ class GANLoss(nn.Module):
             target_tensor = self.fake_label
         return target_tensor.expand_as(input)
 
-    def __call__(self, input, target_is_real):
-        target_tensor = self.get_target_tensor(input, target_is_real)
-        return self.loss(input, target_tensor)
+    def __call__(self, inputs, targets_is_real):
+        losses = torch.zeros_like(targets_is_real)
+        for i, (input, target_is_real) in enumerate(zip(inputs, targets_is_real)):
+            target_tensor = self.get_target_tensor(input, target_is_real)
+            losses[i] = self.loss(input, target_tensor)
+        return losses.mean()
 
 
 # Defines the generator that consists of Resnet blocks between a few
