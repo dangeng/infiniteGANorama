@@ -15,26 +15,31 @@ from tensorboardX import SummaryWriter
 # Must be one for patch_loss
 batch_size = 32
 
-writer = SummaryWriter(comment="CorrectBatchNorm")
+writer = SummaryWriter(comment="SiameseResnet")
 
-device = torch.device("cuda:4")
+device = torch.device("cuda:0")
 
 # Shouldn't be patchGAN, add fc layer at end
-#model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=256)
-model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
+#model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=256, glob=True)
+#model = networks.define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
 #model = networks.Siamese()
+#model = networks.GlobalLocal()
+model = networks.SiameseResnet()
+
+#chkpt = torch.load('checkpoints/old_checkpoints/checkpoints_bn/6.pth')
+#model.load_state_dict(chkpt['state_dict'])
 model.to(device)
 #model = torch.nn.DataParallel(model, device_ids=(0,1,3,4))
 
 patch_loss = networks.GANLoss(use_lsgan=False).to(device)
 
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.5)
+optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
 
 total_steps = 0
 
 dataset = FrankensteinDataset()
 #dataset.initialize('../datasets/street_view/sides/')
-dataset.initialize('../../../data/semanticLandscapes512/train_img')
+dataset.initialize('../../../data/semanticLandscapes512/train_img', blur=True)
 
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -57,12 +62,12 @@ for epoch in range(100000000000):
         pred = model(data)
         #pdb.set_trace()
 
-        #loss = F.binary_cross_entropy(pred, target)
-        loss = patch_loss(pred, target)
+        loss = F.binary_cross_entropy_with_logits(pred, target)
+        #loss = patch_loss(pred, target)
         loss.backward()
         optimizer.step()
 
         if i % 10==0:
             writer.add_scalar('loss', loss.item(),total_steps)
 
-    torch.save({'state_dict': model.state_dict()}, 'checkpoints_bn/{}.pth'.format(epoch))
+    torch.save({'state_dict': model.state_dict(), 'optimizer_state': optimizer.state_dict()}, 'checkpoints/SiameseResnet/{}.pth'.format(epoch))
