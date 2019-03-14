@@ -87,3 +87,6 @@ for i, (data, target) in enumerate(train_loader):
 
     #pdb.set_trace()
 
+    print('Accuracy: {}%'.format(correct/float(total)))
+    print('Real acc: {}%'.format(np.mean(real)*100))
+    print('Fake acc: {}%'.format(np.mean(fake)*100))
