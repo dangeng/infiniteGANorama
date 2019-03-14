@@ -7,6 +7,7 @@ from scipy.misc import imresize, imsave
 from torchvision.transforms import ToTensor, Compose
 import torch
 import cv2
+from scipy.ndimage.filters import gaussian_filter as blur
 
 import pdb
 
@@ -15,7 +16,7 @@ class FrankensteinDataset(BaseDataset):
     def modify_commandline_options(parser, is_train):
         return parser
 
-    def initialize(self, root, allrandom=False):
+    def initialize(self, root, allrandom=False, return_idx=False, blur=False):
         self.root = root
         self.dir_A = os.path.join(root)
 
@@ -23,6 +24,11 @@ class FrankensteinDataset(BaseDataset):
 
         self.A_paths = sorted(self.A_paths)
         self.allrandom = allrandom
+        self.return_idx = return_idx
+        self.blur = blur
+
+    def get_path_name(self, idx):
+        return self.A_paths[idx]
 
     def random_crop(self, im, size=500, resize=256):
         h,w,_ = im.shape
@@ -46,6 +52,11 @@ class FrankensteinDataset(BaseDataset):
         WIDTH = 170
         HEIGHT = 249
 
+        # FOR CVCL
+        SIZE = 256
+        WIDTH = 120
+        HEIGHT = 255
+
         yl = np.random.randint(0, im_l.shape[0]-HEIGHT)
         yr = np.random.randint(0, im_r.shape[0]-HEIGHT)
 
@@ -62,6 +73,35 @@ class FrankensteinDataset(BaseDataset):
             xr = np.random.randint(0, SIZE - WIDTH)
 
         return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :]
+
+    def get_deterministic(self, idx_l, idx_r):
+        if idx_l==idx_r:
+            same = torch.ones(1)
+        else:
+            same = torch.zeros(1)
+
+        A_path_l = self.A_paths[idx_l]
+        A_path_r = self.A_paths[idx_r]
+        A_img_l = Image.open(A_path_l).convert('RGB')
+        A_img_r = Image.open(A_path_r).convert('RGB')
+
+        A_l = np.array(A_img_l)
+        A_r = np.array(A_img_r)
+
+        A_img_l_crop, A_img_r_crop = self.crop(A_l, A_r, same)
+
+        # Ensure commutativity, flip right side
+        A_img_r_crop = A_img_r_crop[:,::-1,:]
+
+        # concatenate on channel axis
+        try:
+            A_img = np.concatenate((A_img_l_crop, A_img_r_crop), 2) 
+        except:
+            return {}, {}
+
+        transform = ToTensor()
+
+        return transform(A_img), same
 
     def __getitem__(self, index):
         if self.allrandom:
@@ -93,6 +133,10 @@ class FrankensteinDataset(BaseDataset):
         # Ensure commutativity, flip right side
         A_img_r_crop = A_img_r_crop[:,::-1,:]
 
+        if self.blur:
+            A_img_l_crop = blur(A_img_l_crop, (2,2,0))
+            A_img_r_crop = blur(A_img_r_crop, (2,2,0))
+
         '''
         A_img = np.hstack((A_img_l_crop, A_img_r_crop))
         imsave('test_ims/{}.jpg'.format(index), A_img)
@@ -120,7 +164,10 @@ class FrankensteinDataset(BaseDataset):
 
         transform = ToTensor()
 
-        return transform(A_img), same
+        if self.return_idx:
+            return transform(A_img), same, idx_l, idx_r
+        else:
+            return transform(A_img), same
 
     def __len__(self):
         # if we use length squared things break (?)
