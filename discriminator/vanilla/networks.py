@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
 from torch.nn import init
+import torchvision as tv
 import functools
 from torch.optim import lr_scheduler
 import numpy as np
+import pdb
 
 ###############################################################################
 # Helper Functions
@@ -362,7 +364,7 @@ class NLayerDiscriminator(nn.Module):
             sequence += [Flatten(), nn.Linear(437, 1), nn.Sigmoid()]
 
         if glob:
-            sequence += [nn.AdaptiveAvgPool2d(1), Flatten(), nn.Linear(out_channels, 1), nn.Sigmoid()]
+            sequence += [nn.AdaptiveAvgPool2d(1), Flatten(), nn.Linear(out_channels, 1)]
 
         self.model = nn.Sequential(*sequence)
 
@@ -381,6 +383,38 @@ class Siamese(nn.Module):
         cat = torch.cat((out_left, out_right), dim=1)
         return self.head(cat)
 
+class GlobalLocal(nn.Module):
+    def __init__(self):
+        super(GlobalLocal, self).__init__()
+        self.glob = define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False, out_channels=128, glob=True)
+        self.local = define_D(6, 64, 'n_layers', n_layers_D=3, use_sigmoid=False)
+        self.head = nn.Conv2d(256, 1, 3)
+
+    def forward(self, input):
+        batch_dim = input.shape[0]
+        out_local = self.local(input)
+        out_local = out_local.view(batch_dim, -1).mean(dim=1).view(-1, 1)
+        out_global = self.glob(input)
+        return (out_local + out_global) / 2.
+
+class SiameseResnet(nn.Module):
+    def __init__(self):
+        super(SiameseResnet, self).__init__()
+        # Remove last pooling and fc layer 
+        # Add own pooling layer (b/c of odd image shapes)
+        resnet = tv.models.resnet50(pretrained=True)
+        self.resnet = nn.Sequential(*list(resnet.children())[:-2], nn.AvgPool2d(kernel_size=(8,6), stride=1, padding=0))
+        self.head = nn.Linear(4096, 1)
+
+    def forward(self, input):
+        batch_size = input.shape[0]
+        out_left = self.resnet(input[:,:3,:,:])
+        out_right = self.resnet(input[:,3:,:,:])
+        cat = torch.cat((out_left, out_right), dim=1)
+        cat = cat.view(batch_size, -1)
+        return self.head(cat)
+
+        
 
 class PixelDiscriminator(nn.Module):
     def __init__(self, input_nc, ndf=64, norm_layer=nn.BatchNorm2d, use_sigmoid=False):
