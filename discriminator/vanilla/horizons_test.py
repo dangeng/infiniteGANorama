@@ -39,39 +39,47 @@ dataset.initialize('../../../data/MITCVCL/coast', allrandom=True, return_idx=Tru
 
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-indices = []
-preds = []
-offsets = []
-
-# 1000 ~ 25 sec
-# 100000 ~ 2500 sec
-model.eval()
+ordered_preds = []
 for i in range(100):
-#for i, (data, target) in enumerate(train_loader):
-    if i % 100 == 0:
-        print(i)
-    data, target, idx_l, idx_r = dataset[i]      # Samples random pair
-    data = data.unsqueeze(0)
-    data, target = data.to(device), target.to(device)
+    print(i)
 
-    total_steps += batch_size
+    # Reset image
+    dataset.initialize('../../../data/MITCVCL/coast', allrandom=True, return_idx=True)
+    indices = []
+    preds = []
+    offsets = []
 
-    pred = model(data)
-    #pred = F.sigmoid(pred).mean(dim=(2,3))
-    #loss = patch_loss(pred.cpu(), target)
-    #loss = F.binary_cross_entropy(pred, target)
+    # 1000 ~ 25 sec
+    # 100000 ~ 2500 sec
+    model.eval()
+    for i in range(100):
+    #for i, (data, target) in enumerate(train_loader):
+        data, target, idx_l, idx_r = dataset[i]      # Samples random pair
+        data = data.unsqueeze(0)
+        data, target = data.to(device), target.to(device)
 
-    indices.append((idx_l, idx_r))
-    preds.append(pred.mean().item())
-    offsets.append(i)
+        total_steps += batch_size
+
+        pred = model(data)
+        #pred = F.sigmoid(pred).mean(dim=(2,3))
+        #loss = patch_loss(pred.cpu(), target)
+        #loss = F.binary_cross_entropy(pred, target)
+
+        indices.append((idx_l, idx_r))
+        preds.append(pred.mean().item())
+        offsets.append(i)
 
 
-#ims = np.array(ims)
-preds = np.array(preds)
-preds = 1 / (1 + np.exp(-preds))
+    #ims = np.array(ims)
+    preds = np.array(preds)
+    preds = 1 / (1 + np.exp(-preds))
 
-np.save('samples/ordered_preds.npy', preds)
+    ordered_preds.append(preds)
 
+ordered_preds = np.array(ordered_preds)
+np.save('samples/ordered_preds.npy', ordered_preds)
+
+'''
 indices = [indices[i] for i in np.argsort(preds)]
 offsets = [offsets[i] for i in np.argsort(preds)]
 preds = preds[np.argsort(preds)]
@@ -104,3 +112,4 @@ for i in range(100):
     data, target = dataset.get_deterministic(offsets[i], indices[i][0], indices[i][1])
     im = data.numpy()
     imsave('samples/worst/{}.jpg'.format(i), convertImage(im).transpose(1,2,0))
+'''
