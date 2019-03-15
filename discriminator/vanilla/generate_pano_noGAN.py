@@ -38,8 +38,8 @@ def convertPano(ims):
         pano = np.concatenate((pano, ims[i][3:,:,::-1]), 2)
     return pano.transpose(1,2,0)
 
-# Dangerous! Don't overload RAM!
-ims = []
+ims = []    # Dangerous! Don't overload RAM!
+used = []
 
 model.eval()
 for im_idx in range(10):
@@ -52,7 +52,7 @@ for im_idx in range(10):
             print(i)
 
         # Skips same image
-        if i == dataset.left_aux['idx']:
+        if i == dataset.left_aux['idx'] or i in used:
             preds.append(0)
             crop_params.append({})
             continue
@@ -75,14 +75,19 @@ for im_idx in range(10):
     indices = np.arange(len(dataset))[np.argsort(preds)]
     preds = preds[np.argsort(preds)]
 
-    # Get best pair and save stuff
-    data, aux = dataset.get_deterministic(indices[-1], crop_params[-1])
+    # Get best pair
+    best_index = indices[-1]
+    best_params = crop_params[-1]
+    data, aux = dataset.get_deterministic(best_index, best_params)
+
+    # Save stuff
+    used.append(best_index)
     ims.append(data.numpy())
     imsave('pano/test_{}.jpg'.format(im_idx), convertImage(data.numpy()))
     np.save('pano/test_{}.npy'.format(im_idx), data.numpy())
 
     # Set left params for next round
-    dataset.set_left(crop_params[-1])
+    dataset.set_left(best_params)
 
 imsave('pano/pano.jpg'.format(im_idx), convertPano(ims))
 
