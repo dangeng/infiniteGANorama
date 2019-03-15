@@ -29,27 +29,28 @@ patch_loss = networks.GANLoss()
 
 total_steps = 0
 
-#dataset = FrankensteinDataset()
-dataset = HorizonDataset()
+dataset = FrankensteinDataset()
+#dataset = HorizonDataset()
 #dataset.initialize('../datasets/street_view/sides/', allrandom=True)
 #dataset.initialize('../../../data/semanticLandscapes512/train_img', allrandom=True, return_idx=True)
 #dataset.initialize('../../../data/MITCVCL/imgs', allrandom=True, return_idx=True)
-dataset.initialize('../../../data/MITCVCL/coast', allrandom=True, return_idx=True)
+dataset.initialize('../../../data/MITCVCL/coast', allrandom=True)
 #dataset.initialize('../../../data/MITCVCL/mountain', allrandom=True, return_idx=True)
 
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 indices = []
+auxes = []
 preds = []
 
 # 1000 ~ 25 sec
 # 100000 ~ 2500 sec
 model.eval()
-for i in range(100):
+for i in range(10000):
 #for i, (data, target) in enumerate(train_loader):
     if i % 100 == 0:
         print(i)
-    data, target, idx_l, idx_r = dataset[i]      # Samples random pair
+    data, target, aux = dataset[i]      # Samples random pair
     data = data.unsqueeze(0)
     data, target = data.to(device), target.to(device)
 
@@ -60,7 +61,8 @@ for i in range(100):
     #loss = patch_loss(pred.cpu(), target)
     #loss = F.binary_cross_entropy(pred, target)
 
-    indices.append((idx_l, idx_r))
+    #indices.append((aux['idx_l'], aux['idx_r']))
+    auxes.append(aux)
     preds.append(pred.mean().item())
 
 
@@ -68,7 +70,8 @@ for i in range(100):
 preds = np.array(preds)
 preds = 1 / (1 + np.exp(-preds))
 
-indices = [indices[i] for i in np.argsort(preds)]
+#indices = [indices[i] for i in np.argsort(preds)]
+auxes = [auxes[i] for i in np.argsort(preds)]
 preds = preds[np.argsort(preds)]
 
 def convertImage(im):
@@ -78,7 +81,8 @@ def convertImage(im):
 
 def savePaths(indices):
     paths = ''
-    for idx_l, idx_r in indices:
+    for aux in auxes:
+        idx_l, idx_r = aux['left_index'], aux['right_index']
         paths += dataset.get_path_name(idx_l).split('/')[-1]
         paths += ', '
         paths += dataset.get_path_name(idx_r).split('/')[-1]
@@ -89,13 +93,15 @@ def savePaths(indices):
     f.close()
 
 np.savetxt('samples/preds.txt', preds)
-savePaths(indices)
+savePaths(auxes)
 
 for i in range(1,101):
-    data, target = dataset.get_deterministic(indices[-i][0], indices[-i][1])
+    #data, target = dataset.get_deterministic(indices[-i][0], indices[-i][1])
+    data, target = dataset.get_deterministic(auxes[-i])
     im = data.numpy()
     imsave('samples/best/{}.jpg'.format(i), convertImage(im).transpose(1,2,0))
 for i in range(100):
-    data, target = dataset.get_deterministic(indices[i][0], indices[i][1])
+    #data, target = dataset.get_deterministic(indices[i][0], indices[i][1])
+    data, target = dataset.get_deterministic(auxes[i])
     im = data.numpy()
     imsave('samples/worst/{}.jpg'.format(i), convertImage(im).transpose(1,2,0))

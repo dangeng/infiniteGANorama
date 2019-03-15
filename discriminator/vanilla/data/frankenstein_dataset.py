@@ -16,7 +16,7 @@ class FrankensteinDataset(BaseDataset):
     def modify_commandline_options(parser, is_train):
         return parser
 
-    def initialize(self, root, allrandom=False, return_idx=False, blur=False):
+    def initialize(self, root, allrandom=False, blur=False):
         self.root = root
         self.dir_A = os.path.join(root)
 
@@ -24,7 +24,6 @@ class FrankensteinDataset(BaseDataset):
 
         self.A_paths = sorted(self.A_paths)
         self.allrandom = allrandom
-        self.return_idx = return_idx
         self.blur = blur
 
     def get_path_name(self, idx):
@@ -39,7 +38,7 @@ class FrankensteinDataset(BaseDataset):
         else:
             return crop
 
-    def crop(self, im_l, im_r, same):
+    def crop(self, im_l, im_r, same, crop_params=None):
         '''
         Crop image to 341 x 500
         Starting image is assumed to be guranteed to be size 1024 x >500
@@ -72,9 +71,16 @@ class FrankensteinDataset(BaseDataset):
             xl = np.random.randint(0, SIZE - WIDTH)
             xr = np.random.randint(0, SIZE - WIDTH)
 
-        return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :]
+        if crop_params:
+            xl = crop_params['left_x_crop']
+            yl = crop_params['left_y_crop']
+            xr = crop_params['right_x_crop']
+            yr = crop_params['right_y_crop']
 
-    def get_deterministic(self, idx_l, idx_r):
+        return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :], {'left_x_crop': xl, 'right_x_crop': xr, 'left_y_crop': yl, 'right_y_crop': yr}
+
+    def get_deterministic(self, aux):
+        idx_l, idx_r = aux['left_index'], aux['right_index']
         if idx_l==idx_r:
             same = torch.ones(1)
         else:
@@ -88,7 +94,7 @@ class FrankensteinDataset(BaseDataset):
         A_l = np.array(A_img_l)
         A_r = np.array(A_img_r)
 
-        A_img_l_crop, A_img_r_crop = self.crop(A_l, A_r, same)
+        A_img_l_crop, A_img_r_crop, crop_params = self.crop(A_l, A_r, same, aux)
 
         # Ensure commutativity, flip right side
         A_img_r_crop = A_img_r_crop[:,::-1,:]
@@ -126,9 +132,7 @@ class FrankensteinDataset(BaseDataset):
         A_l = np.array(A_img_l)
         A_r = np.array(A_img_r)
 
-        #A_l, A_r = self.random_crop(A_l), self.random_crop(A_r) # CHANGE
-
-        A_img_l_crop, A_img_r_crop = self.crop(A_l, A_r, same)
+        A_img_l_crop, A_img_r_crop, crop_params = self.crop(A_l, A_r, same)
 
         # Ensure commutativity, flip right side
         A_img_r_crop = A_img_r_crop[:,::-1,:]
@@ -137,37 +141,18 @@ class FrankensteinDataset(BaseDataset):
             A_img_l_crop = blur(A_img_l_crop, (2,2,0))
             A_img_r_crop = blur(A_img_r_crop, (2,2,0))
 
-        '''
-        A_img = np.hstack((A_img_l_crop, A_img_r_crop))
-        imsave('test_ims/{}.jpg'.format(index), A_img)
-        imsave('test_ims/{}-l.jpg'.format(index), A_l)
-        imsave('test_ims/{}-r.jpg'.format(index), A_r)
-        '''
-
-        '''
-        h,w,c = A_l.shape
-        h = min(h, A_r.shape[0])    # Choose min height
-        w = w//3
-
-        A_img_l_crop = A_l[:h,:w,:]
-        A_img_r_crop = A_r[:h,-w:,:]
-        #A_img = np.hstack((A_img_l_crop, A_img_r_crop))
-        '''
         # concatenate on channel axis
         try:
             A_img = np.concatenate((A_img_l_crop, A_img_r_crop), 2) 
         except:
             return {}, {}
 
-        #pdb.set_trace()
-        #A_img = cv2.resize(A_img, dsize=(170, 250), interpolation=cv2.INTER_CUBIC)
-
         transform = ToTensor()
 
-        if self.return_idx:
-            return transform(A_img), same, idx_l, idx_r
-        else:
-            return transform(A_img), same
+        aux = {'left_index': idx_l, 'right_index': idx_r}
+        aux.update(crop_params)
+
+        return transform(A_img), same, aux
 
     def __len__(self):
         # if we use length squared things break (?)
