@@ -11,6 +11,8 @@ from scipy.ndimage.filters import gaussian_filter as blur
 
 import pdb
 
+FUZZY_HORIZONS = False
+
 class FrankensteinDataset(BaseDataset):
     @staticmethod
     def modify_commandline_options(parser, is_train):
@@ -52,9 +54,11 @@ class FrankensteinDataset(BaseDataset):
         HEIGHT = 249
 
         # FOR CVCL
-        SIZE = 256
-        WIDTH = 120
-        HEIGHT = 255
+        #SIZE = 256
+        #WIDTH = 120
+        #HEIGHT = 255
+
+        horizon_fuzz = 0
 
         yl = np.random.randint(0, im_l.shape[0]-HEIGHT)
         yr = np.random.randint(0, im_r.shape[0]-HEIGHT)
@@ -66,6 +70,12 @@ class FrankensteinDataset(BaseDataset):
 
             # Set y cuts to be the same (we want horizons!)
             yl = yr
+
+            # Very hacky (I just want to sleep man)
+            if FUZZY_HORIZONS:
+                horizon_fuzz = np.random.randint(max(-20, -yr), 
+                                                 min(20, im_r.shape[0]-HEIGHT-yr))
+                yr += horizon_fuzz
         else:
             # we choose the patch from anywhere
             xl = np.random.randint(0, SIZE - WIDTH)
@@ -77,7 +87,10 @@ class FrankensteinDataset(BaseDataset):
             xr = crop_params['right_x_crop']
             yr = crop_params['right_y_crop']
 
-        return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :], {'left_x_crop': xl, 'right_x_crop': xr, 'left_y_crop': yl, 'right_y_crop': yr}
+        if FUZZY_HORIZONS:
+            return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :], {'left_x_crop': xl, 'right_x_crop': xr, 'left_y_crop': yl, 'right_y_crop': yr}, horizon_fuzz
+        else:
+            return im_l[yl:yl+HEIGHT, xl:xl+WIDTH, :], im_r[yr:yr+HEIGHT, xr:xr+WIDTH, :], {'left_x_crop': xl, 'right_x_crop': xr, 'left_y_crop': yl, 'right_y_crop': yr}
 
     def get_deterministic(self, aux):
         idx_l, idx_r = aux['left_index'], aux['right_index']
@@ -132,7 +145,10 @@ class FrankensteinDataset(BaseDataset):
         A_l = np.array(A_img_l)
         A_r = np.array(A_img_r)
 
-        A_img_l_crop, A_img_r_crop, crop_params = self.crop(A_l, A_r, same)
+        if FUZZY_HORIZONS:
+            A_img_l_crop, A_img_r_crop, crop_params, horizon_fuzz = self.crop(A_l, A_r, same)
+        else:
+            A_img_l_crop, A_img_r_crop, crop_params = self.crop(A_l, A_r, same)
 
         # Ensure commutativity, flip right side
         A_img_r_crop = A_img_r_crop[:,::-1,:]
@@ -145,14 +161,17 @@ class FrankensteinDataset(BaseDataset):
         try:
             A_img = np.concatenate((A_img_l_crop, A_img_r_crop), 2) 
         except:
-            return {}, {}
+            return {}, {}, {}
 
         transform = ToTensor()
 
         aux = {'left_index': idx_l, 'right_index': idx_r}
         aux.update(crop_params)
 
-        return transform(A_img), same, aux
+        if FUZZY_HORIZONS and same:
+            return transform(A_img), same - abs(horizon_fuzz/50.), aux
+        else:
+            return transform(A_img), same, aux
 
     def __len__(self):
         # if we use length squared things break (?)
